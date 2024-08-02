@@ -35,7 +35,7 @@ async function init() {
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
   scene.add(ambientLight);
 
-  const rhino = new RhinoManager(scene);
+  const rhino = new RhinoManager(scene, renderer);
   let model;
 
   // model = await rhino.loadFile("Rhino_Logo.3dm");

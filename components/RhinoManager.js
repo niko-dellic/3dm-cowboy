@@ -5,8 +5,9 @@ import { GUI } from "three/examples/jsm/libs/lil-gui.module.min.js";
 import * as THREE from "three";
 
 export class RhinoManager {
-  constructor(scene) {
+  constructor(scene, renderer) {
     this.scene = scene;
+    this.renderer = renderer;
     this.loader = new Rhino3dmLoader();
     this.loader.setLibraryPath("https://cdn.jsdelivr.net/npm/rhino3dm@8.0.1/");
 
@@ -140,11 +141,13 @@ export class RhinoManager {
     const objectsToRemove = [];
 
     this.scene.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
+      if (child instanceof THREE.Mesh || child instanceof THREE.BoxHelper) {
         objectsToRemove.push(child);
       }
     });
     objectsToRemove.forEach((object) => {
+      let parent = object.parent;
+      parent.remove(object);
       this.scene.remove(object);
       if (object.geometry) object.geometry.dispose(); // Dispose geometry if needed
       if (object.material) {
@@ -155,5 +158,7 @@ export class RhinoManager {
         }
       }
     });
+
+    this.renderer.renderLists.dispose();
   }
 }
