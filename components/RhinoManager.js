@@ -10,7 +10,7 @@ export class RhinoManager {
     this.loader = new Rhino3dmLoader();
     this.loader.setLibraryPath("https://cdn.jsdelivr.net/npm/rhino3dm@8.0.1/");
 
-    // this.initRhino();
+    this.initRhino();
     this.addUpload();
   }
 
@@ -19,7 +19,7 @@ export class RhinoManager {
     this.loading = document.createElement("div");
     this.loading.id = "loader";
 
-    this.rhino = await rhino3dm();
+    // this.rhino = await rhino3dm();
   }
 
   createLoadingSymbol() {
