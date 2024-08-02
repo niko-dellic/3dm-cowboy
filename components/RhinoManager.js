@@ -1,5 +1,5 @@
 import { Rhino3dmLoader } from "three/addons/loaders/3DMLoader.js";
-// import rhino3dm from "https://cdn.jsdelivr.net/npm/rhino3dm@8.9.0/rhino3dm.module.min.js";
+import rhino3dm from "./rhino3dm/rhino3dm.module.min.js";
 import { GUI } from "three/examples/jsm/libs/lil-gui.module.min.js";
 
 import * as THREE from "three";
@@ -12,6 +12,13 @@ export class RhinoManager {
 
     this.initRhino();
     this.addUpload();
+
+    // add event listener for keypress delete
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Delete") {
+        this.deleteAll();
+      }
+    });
   }
 
   async initRhino() {
@@ -19,7 +26,7 @@ export class RhinoManager {
     this.loading = document.createElement("div");
     this.loading.id = "loader";
 
-    // this.rhino = await rhino3dm();
+    this.rhino = await rhino3dm();
   }
 
   createLoadingSymbol() {
@@ -55,26 +62,25 @@ export class RhinoManager {
   }
 
   parseBuffer(file) {
-    return;
-    // this.createLoadingSymbol();
+    this.createLoadingSymbol();
 
-    // const doc = this.rhino.File3dm.fromByteArray(new Uint8Array(file));
-    // const buffer = new Uint8Array(doc.toByteArray()).buffer;
+    const doc = this.rhino.File3dm.fromByteArray(new Uint8Array(file));
+    const buffer = new Uint8Array(doc.toByteArray()).buffer;
 
-    // this.loader.parse(
-    //   buffer,
-    //   (object) => {
-    //     this.scene.add(object);
-    //     this.showBoundingBoxes(object);
+    this.loader.parse(
+      buffer,
+      (object) => {
+        this.scene.add(object);
+        this.showBoundingBoxes(object);
 
-    //     this.initGUI(object.userData.layers, this.scene);
-    //     this.removeLoadingSymbol();
-    //   },
-    //   (progress) => {},
-    //   (error) => {
-    //     console.log(error);
-    //   }
-    // );
+        this.initGUI(object.userData.layers, this.scene);
+        this.removeLoadingSymbol();
+      },
+      (progress) => {},
+      (error) => {
+        console.log(error);
+      }
+    );
   }
 
   showBoundingBoxes(object) {
@@ -128,5 +134,26 @@ export class RhinoManager {
           });
         });
     }
+  }
+
+  deleteAll() {
+    const objectsToRemove = [];
+
+    this.scene.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        objectsToRemove.push(child);
+      }
+    });
+    objectsToRemove.forEach((object) => {
+      this.scene.remove(object);
+      if (object.geometry) object.geometry.dispose(); // Dispose geometry if needed
+      if (object.material) {
+        if (Array.isArray(object.material)) {
+          object.material.forEach((mat) => mat.dispose()); // Dispose materials if needed
+        } else {
+          object.material.dispose(); // Dispose material if needed
+        }
+      }
+    });
   }
 }
