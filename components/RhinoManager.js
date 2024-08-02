@@ -1,5 +1,5 @@
 import { Rhino3dmLoader } from "three/addons/loaders/3DMLoader.js";
-import rhino3dm from "https://cdn.jsdelivr.net/npm/rhino3dm@8.9.0/rhino3dm.module.min.js";
+// import rhino3dm from "https://cdn.jsdelivr.net/npm/rhino3dm@8.9.0/rhino3dm.module.min.js";
 import { GUI } from "three/examples/jsm/libs/lil-gui.module.min.js";
 
 import * as THREE from "three";
@@ -10,7 +10,7 @@ export class RhinoManager {
     this.loader = new Rhino3dmLoader();
     this.loader.setLibraryPath("https://cdn.jsdelivr.net/npm/rhino3dm@8.0.1/");
 
-    this.initRhino();
+    // this.initRhino();
     this.addUpload();
   }
 
@@ -55,25 +55,26 @@ export class RhinoManager {
   }
 
   parseBuffer(file) {
-    this.createLoadingSymbol();
+    return;
+    // this.createLoadingSymbol();
 
-    const doc = this.rhino.File3dm.fromByteArray(new Uint8Array(file));
-    const buffer = new Uint8Array(doc.toByteArray()).buffer;
+    // const doc = this.rhino.File3dm.fromByteArray(new Uint8Array(file));
+    // const buffer = new Uint8Array(doc.toByteArray()).buffer;
 
-    this.loader.parse(
-      buffer,
-      (object) => {
-        this.scene.add(object);
-        this.showBoundingBoxes(object);
+    // this.loader.parse(
+    //   buffer,
+    //   (object) => {
+    //     this.scene.add(object);
+    //     this.showBoundingBoxes(object);
 
-        this.initGUI(object.userData.layers, this.scene);
-        this.removeLoadingSymbol();
-      },
-      (progress) => {},
-      (error) => {
-        console.log(error);
-      }
-    );
+    //     this.initGUI(object.userData.layers, this.scene);
+    //     this.removeLoadingSymbol();
+    //   },
+    //   (progress) => {},
+    //   (error) => {
+    //     console.log(error);
+    //   }
+    // );
   }
 
   showBoundingBoxes(object) {
