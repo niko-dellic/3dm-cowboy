@@ -38,7 +38,7 @@ async function init() {
   const rhino = new RhinoManager(scene, renderer);
   let model;
 
-  // model = await rhino.loadFile("Rhino_Logo.3dm");
+  model = await rhino.loadFile("Rhino_Logo.3dm");
 
   if (model) {
     rhino.initGUI(model.userData.layers, scene);
