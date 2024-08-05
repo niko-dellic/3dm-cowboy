@@ -42,8 +42,10 @@ export default function RaycastManager(scene, camera, renderer) {
 
     // Highlight intersected objects
     for (let i = 0; i < intersects.length; i++) {
-      intersects[i].object.material.color.set(0x95f542);
-      intersectedObjects.add(intersects[i].object);
+      if (intersects[i].object.isMesh) {
+        intersects[i].object.material.color.set(new THREE.Color("yellow"));
+        intersectedObjects.add(intersects[i].object);
+      }
     }
   }
 

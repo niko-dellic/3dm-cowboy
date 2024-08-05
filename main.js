@@ -1,17 +1,23 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { RhinoManager } from "./components/RhinoManager";
+import { FileManager } from "./components/FileManager";
 import RaycastManager from "./components/RaycasterManager";
+import { GenerateNavigation } from "./components/Navigation";
+import { VertexNormalsHelper } from "three/addons/helpers/VertexNormalsHelper.js";
+import { GUI } from "three/examples/jsm/libs/lil-gui.module.min.js";
+
 // import CameraControls from "camera-controls";
 
 let camera, scene, renderer;
 let controls;
 let raycastManager;
-
+let navMeshGenerated = false;
+let gui;
+let fileManager;
 init();
 
 async function init() {
-  THREE.Object3D.DEFAULT_UP.set(0, 0, 1);
+  // THREE.Object3D.DEFAULT_UP.set(0, 0, 1);
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(window.devicePixelRatio);
@@ -24,32 +30,39 @@ async function init() {
     10,
     5000
   );
-  camera.position.set(26, -40, 5);
   controls = new OrbitControls(camera, renderer.domElement);
 
   scene = new THREE.Scene();
+  // scene.background = new THREE.Color("blue");
 
   const directionalLight = new THREE.DirectionalLight(0xffffff, 6);
-  directionalLight.position.set(50, -50, 50);
-  scene.add(directionalLight);
+  directionalLight.position.set(50, 50, 50);
+  // scene.add(directionalLight);
 
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-  scene.add(ambientLight);
+  // scene.add(ambientLight);
 
-  const rhino = new RhinoManager(scene, renderer);
+  fileManager = new FileManager(scene, renderer);
   let model;
 
-  model = await rhino.loadFile("platforms.3dm");
+  // model = await fileManager.loadFile("full_Sphere.3dm");
+  model = await fileManager.loadFile("platforms.3dm");
+  // model = await fileManager.loadFile("dungeon.gltf");
+  // model = await fileManager.loadFile("environment.glb");
 
-  fitCameraToObject(camera, model, 2, controls);
+  initGUI(scene);
 
   if (model) {
-    rhino.initGUI(model.userData.layers, scene);
+    fitCameraToObject(camera, model, 2, controls);
+    guiLayers(model.userData.layers, scene);
+    await initDebugger(model, scene);
+
+    // scene.add(helper);
+    generateNavigationHandler(scene);
+    // raycastManager = RaycastManager(scene, camera, renderer);
   }
 
   // Initialize RaycastManager
-  raycastManager = RaycastManager(scene, camera, renderer);
-
   window.addEventListener("resize", resize);
   renderer.setAnimationLoop(animate);
 }
@@ -66,7 +79,10 @@ function resize() {
 
 function animate() {
   controls.update();
-  raycastManager.updateRaycaster(); // Update the raycaster within the main render loop
+
+  // if (raycastManager) {
+  //   raycastManager.updateRaycaster(); // Update the raycaster within the main render loop
+  // }
   renderer.render(scene, camera);
 }
 
@@ -110,5 +126,98 @@ function fitCameraToObject(
     controls.target.copy(center);
     controls.maxDistance = adjustedCameraZ * 10;
     controls.update();
+  }
+}
+
+function generateNavigationHandler(scene) {
+  // add event listener for keypress delete
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "G" || event.key === "g") {
+      if (navMeshGenerated) {
+        console.log("Navigation already generated");
+        return;
+      }
+      GenerateNavigation(scene);
+      navMeshGenerated = true;
+    }
+  });
+}
+
+function initDebugger(model, scene) {
+  model.traverse((child) => {
+    if (child.isMesh) {
+      const geometry = child.geometry;
+      if (geometry) {
+        geometry.computeVertexNormals();
+        const normals = new VertexNormalsHelper(child, 1);
+        const line = addEdges(geometry);
+        // scene.add(normals);
+        child.add(line);
+      }
+    }
+  });
+}
+
+function addEdges(geometry) {
+  const edges = new THREE.EdgesGeometry(geometry);
+  const line = new THREE.LineSegments(
+    edges,
+    new THREE.LineBasicMaterial({
+      color: new THREE.Color("blue"),
+    })
+  );
+  return line;
+}
+
+function initGUI(scene) {
+  gui = new GUI({ title: "Controls" });
+
+  const navTools = gui.addFolder("Navigation Generator");
+  // add config slider for tilesize
+  let tileSize = 25;
+  navTools
+    .add({ tileSize: tileSize }, "tileSize", 3, 50, 1)
+    .name("Tile Size")
+    .onChange((val) => {
+      tileSize = val;
+    });
+
+  // add button to generate the navigation mesh
+  navTools.add(
+    { generateNavMesh: () => GenerateNavigation(scene, tileSize) },
+    "generateNavMesh"
+  );
+  // add button to download the navigation mesh
+  navTools.add({ downloadNavMesh: () => downloadNavMesh() }, "downloadNavMesh");
+}
+
+function guiLayers(layers) {
+  // add a folder called layers
+  if (!layers) return;
+
+  const layerFolder = gui.addFolder("Layers");
+
+  for (let i = 0; i < layers.length; i++) {
+    const layer = layers[i];
+    layerFolder
+      .add(layer, "visible")
+      .name(layer.name)
+      .onChange(function (val) {
+        const name = layer.name;
+
+        scene.traverse(function (child) {
+          if (child.userData.hasOwnProperty("attributes")) {
+            if ("layerIndex" in child.userData.attributes) {
+              const layerName =
+                layers[child.userData.attributes.layerIndex].name;
+
+              if (layerName === name) {
+                child.visible = val;
+                layer.visible = val;
+              }
+            }
+          }
+        });
+      });
   }
 }
