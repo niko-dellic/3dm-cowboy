@@ -12,6 +12,9 @@
     "vite": "^5.3.4"
   },
   "dependencies": {
+    "@recast-navigation/three": "^0.33.0",
+    "camera-controls": "^2.8.5",
+    "recast-navigation": "^0.33.0",
     "three": "^0.167.1"
   }
 }

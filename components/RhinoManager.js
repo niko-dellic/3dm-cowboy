@@ -1,6 +1,7 @@
 import { Rhino3dmLoader } from "three/addons/loaders/3DMLoader.js";
 import rhino3dm from "./rhino3dm/rhino3dm.module.min.js";
 import { GUI } from "three/examples/jsm/libs/lil-gui.module.min.js";
+import { GenerateNavigation } from "./Navigation.js";
 
 import * as THREE from "three";
 
@@ -10,6 +11,8 @@ export class RhinoManager {
     this.renderer = renderer;
     this.loader = new Rhino3dmLoader();
     this.loader.setLibraryPath("https://cdn.jsdelivr.net/npm/rhino3dm@8.0.1/");
+    this.boundingBoxes = [];
+    this.boundingBoxesVisible = false;
 
     this.initRhino();
     this.addUpload();
@@ -18,6 +21,10 @@ export class RhinoManager {
     document.addEventListener("keydown", (event) => {
       if (event.key === "Delete") {
         this.deleteAll();
+      } else if (event.key === "B" || event.key === "b") {
+        this.toggleBoundingBoxes();
+      } else if (event.key === "G" || event.key === "g") {
+        GenerateNavigation(this.scene);
       }
     });
   }
@@ -86,7 +93,17 @@ export class RhinoManager {
 
   showBoundingBoxes(object) {
     const box = new THREE.BoxHelper(object, 0xffff00);
+    box.visible = this.boundingBoxesVisible;
+    this.boundingBoxes.push(box);
     this.scene.add(box);
+  }
+
+  toggleBoundingBoxes() {
+    this.boundingBoxesVisible = !this.boundingBoxesVisible;
+    this.boundingBoxes.forEach((box) => {
+      box.visible = this.boundingBoxesVisible;
+    });
+    this.renderer.render(this.scene, this.scene.camera); // Ensure the scene is re-rendered
   }
 
   addUpload() {
