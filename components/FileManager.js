@@ -2,12 +2,16 @@ import { Rhino3dmLoader } from "three/addons/loaders/3DMLoader.js";
 import rhino3dm from "./rhino3dm/rhino3dm.module.min.js";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { compressPositions } from "three/examples/jsm/utils/GeometryCompressionUtils.js";
+import { VertexNormalsHelper } from "three/addons/helpers/VertexNormalsHelper.js";
 
 export class FileManager {
-  constructor(scene, renderer) {
+  constructor(scene, camera, renderer, controls, navGen, gui) {
     this.scene = scene;
+    this.camera = camera;
     this.renderer = renderer;
+    this.controls = controls;
+    this.navGen = navGen;
+    this.gui = gui;
     this.rhinoLoader = new Rhino3dmLoader();
     this.glTFLoader = new GLTFLoader();
     this.rhinoLoader.setLibraryPath(
@@ -17,7 +21,6 @@ export class FileManager {
     this.boundingBoxesVisible = false;
 
     this.initRhino();
-    this.addUpload();
 
     // add event listener for keypress delete
     document.addEventListener("keydown", (event) => {
@@ -25,6 +28,10 @@ export class FileManager {
         this.deleteAll();
       } else if (event.key === "B" || event.key === "b") {
         this.toggleBoundingBoxes();
+      } else if (event.key === "G" || event.key === "g") {
+        this.navGen.generateNavMesh().then((result) => {
+          if (result) this.guiExport();
+        });
       }
     });
   }
@@ -45,6 +52,32 @@ export class FileManager {
     document.body.removeChild(this.loading);
   }
 
+  processObject(object) {
+    this.standardizeUnits(
+      object,
+      object.userData.settings.modelUnitSystem.name
+    );
+    this.convertZUpToYUp(object);
+
+    this.scene.add(object);
+    this.addBoundingBox(object);
+
+    object.traverse((child) => {
+      if (child.isMesh) {
+        const geometry = child.geometry;
+        if (geometry) {
+          const line = this.addEdges(geometry);
+          child.add(line);
+        }
+      }
+    });
+
+    this.guiLayers(object.userData.layers, this.gui);
+    this.guiNavMesh(this.gui);
+    this.fitCameraToObject(this.camera, object, 2, this.controls);
+    this.initDebugger(object);
+  }
+
   async loadFile(filePath) {
     return new Promise((resolve, reject) => {
       this.createLoadingSymbol();
@@ -52,14 +85,7 @@ export class FileManager {
         this.rhinoLoader.load(
           filePath,
           (object) => {
-            this.standardizeUnits(
-              object,
-              object.userData.settings.modelUnitSystem.name
-            );
-            this.convertZUpToYUp(object);
-
-            this.scene.add(object);
-            this.showBoundingBoxes(object);
+            this.processObject(object);
 
             this.removeLoadingSymbol();
             resolve(object);
@@ -84,7 +110,7 @@ export class FileManager {
             });
             this.scene.add(group);
             this.removeLoadingSymbol();
-            this.showBoundingBoxes(group);
+            this.addBoundingBox(group);
             resolve(group);
           },
           (xhr) => {
@@ -99,6 +125,17 @@ export class FileManager {
     });
   }
 
+  handleUpload(event) {
+    console.log("uploading file");
+    const file = event.target.files[0];
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const buffer = event.target.result;
+      this.parseBuffer(buffer);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
   parseBuffer(file) {
     this.createLoadingSymbol();
     const doc = this.rhino.File3dm.fromByteArray(new Uint8Array(file));
@@ -107,14 +144,7 @@ export class FileManager {
     this.rhinoLoader.parse(
       buffer,
       (object) => {
-        this.standardizeUnits(
-          object,
-          object.userData.settings.modelUnitSystem.name
-        );
-        this.scene.add(object);
-        this.showBoundingBoxes(object);
-
-        this.initGUI(object.userData.layers, this.scene);
+        this.processObject(object);
         this.removeLoadingSymbol();
       },
       (progress) => {},
@@ -124,7 +154,7 @@ export class FileManager {
     );
   }
 
-  showBoundingBoxes(object) {
+  addBoundingBox(object) {
     const box = new THREE.BoxHelper(object, 0xffff00);
     box.visible = this.boundingBoxesVisible;
     this.boundingBoxes.push(box);
@@ -135,27 +165,6 @@ export class FileManager {
     this.boundingBoxesVisible = !this.boundingBoxesVisible;
     this.boundingBoxes.forEach((box) => {
       box.visible = this.boundingBoxesVisible;
-    });
-  }
-
-  addUpload() {
-    const upload = document.createElement("input");
-    upload.type = "file";
-    upload.style.position = "absolute";
-    upload.style.top = "10px";
-    upload.style.left = "10px";
-    upload.style.zIndex = "100";
-    document.body.appendChild(upload);
-
-    upload.addEventListener("change", (event) => {
-      const file = event.target.files[0];
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const buffer = event.target.result;
-
-        this.parseBuffer(buffer);
-      };
-      reader.readAsArrayBuffer(file);
     });
   }
 
@@ -250,8 +259,152 @@ export class FileManager {
     const edges = new THREE.EdgesGeometry(geometry);
     const line = new THREE.LineSegments(
       edges,
-      new THREE.LineBasicMaterial({ color: new THREE.Color("red") })
+      new THREE.LineBasicMaterial({
+        color: new THREE.Color("blue"),
+      })
     );
     return line;
+  }
+
+  guiLayers(layers, gui) {
+    // add a folder called layers
+    if (!layers) return;
+
+    const layerFolder = gui.addFolder("Layers");
+    const scene = this.scene;
+
+    for (let i = 0; i < layers.length; i++) {
+      const layer = layers[i];
+      layerFolder
+        .add(layer, "visible")
+        .name(layer.name)
+        .onChange(function (val) {
+          const name = layer.name;
+
+          scene.traverse(function (child) {
+            if (child.userData.hasOwnProperty("attributes")) {
+              if ("layerIndex" in child.userData.attributes) {
+                const layerName =
+                  layers[child.userData.attributes.layerIndex].name;
+
+                if (layerName === name) {
+                  child.visible = val;
+                  layer.visible = val;
+                }
+              }
+            }
+          });
+        });
+    }
+  }
+
+  guiNavMesh(gui) {
+    const navTools = gui.addFolder("Navigation Generator");
+    // add config slider for tilesize
+    let tileSize = 25;
+    const navGen = this.navGen;
+    navTools
+      .add({ tileSize: tileSize }, "tileSize", 3, 50, 1)
+      .name("Tile Size")
+      .onChange((val) => {
+        tileSize = val;
+      });
+
+    // add button to generate the navigation mesh
+    navTools.add(
+      {
+        Generate: async () => {
+          const result = await navGen.generateNavMesh(tileSize);
+          if (result) this.guiExport(gui);
+        },
+      },
+      "Generate"
+    );
+  }
+
+  guiExport() {
+    // add a folder called export
+    const exportFolder = this.gui.addFolder("Export");
+    const navGen = this.navGen;
+    exportFolder.add(
+      { DownloadGeoJson: () => navGen.saveNavMesh() },
+      "DownloadGeoJson"
+    );
+    exportFolder.add(
+      {
+        Delete: () => {
+          navGen.deleteNavMesh();
+          exportFolder.destroy();
+        },
+      },
+      "Delete"
+    );
+  }
+
+  fitCameraToObject(
+    camera,
+    object,
+    offset = 1.25,
+    controls,
+    pitch = 45,
+    bearing = 45
+  ) {
+    const boundingBox = new THREE.Box3().setFromObject(object);
+
+    const size = boundingBox.getSize(new THREE.Vector3());
+    const center = boundingBox.getCenter(new THREE.Vector3());
+
+    const maxDim = Math.max(size.x, size.y, size.z);
+    console.log(camera);
+    const fov = camera.fov * (Math.PI / 180);
+    const cameraZ = Math.abs(maxDim / (2 * Math.tan(fov / 2)));
+    const adjustedCameraZ = cameraZ * offset;
+
+    // Convert pitch and bearing to radians
+    const pitchRad = THREE.MathUtils.degToRad(pitch);
+    const bearingRad = THREE.MathUtils.degToRad(bearing);
+
+    // Calculate camera position using spherical coordinates
+    const x =
+      center.x + adjustedCameraZ * Math.sin(pitchRad) * Math.cos(bearingRad);
+    const y =
+      center.y + adjustedCameraZ * Math.sin(pitchRad) * Math.sin(bearingRad);
+    const z = center.z + adjustedCameraZ * Math.cos(pitchRad);
+
+    camera.position.set(x, y, z);
+    camera.lookAt(center);
+
+    camera.near = 0.1;
+    camera.far = adjustedCameraZ + maxDim * 2;
+    camera.updateProjectionMatrix();
+
+    if (controls) {
+      controls.target.copy(center);
+      controls.maxDistance = adjustedCameraZ * 10;
+      controls.update();
+    }
+  }
+
+  initDebugger(object) {
+    object.traverse((child) => {
+      if (child.isMesh) {
+        const geometry = child.geometry;
+        if (geometry) {
+          geometry.computeVertexNormals();
+          const normals = new VertexNormalsHelper(child, 1);
+
+          // make invisible
+          normals.visible = false;
+          this.scene.add(normals);
+
+          // add event listener for keypress N
+          document.addEventListener("keydown", (event) => {
+            if (event.key === "N" || event.key === "n") {
+              normals.visible = !normals.visible;
+            }
+          });
+        }
+      }
+    });
   }
 }
