@@ -157,7 +157,7 @@ export default class RaycastManager {
     if (reset) {
       line.material.color.set(new THREE.Color("blue"));
     } else {
-      line.material.color.set(new THREE.Color("red"));
+      line.material.color.set(new THREE.Color("Aqua"));
     }
   }
 
