@@ -1,57 +1,155 @@
 import * as THREE from "three";
+import { TransformControls } from "three/addons/controls/TransformControls.js";
 
-export default function RaycastManager(scene, camera, renderer) {
-  const raycaster = new THREE.Raycaster();
-  const pointer = new THREE.Vector2();
-  const intersectedObjects = new Set();
+export default class RaycastManager {
+  constructor(scene, camera, renderer, controls) {
+    this.scene = scene;
+    this.camera = camera;
+    this.renderer = renderer;
+    this.controls = controls;
 
-  let isPointerInWindow = false;
+    this.raycaster = new THREE.Raycaster();
+    this.pointer = new THREE.Vector2();
+    this.intersectedObjects = new Set();
+    this.transformControls = null;
+    this.selectedObject = null;
 
-  function onPointerMove(event) {
-    // Check if the mouse is within the window bounds
+    this.isPointerInWindow = false;
+    this.objectsToExclude = new Set();
+
+    window.addEventListener("pointermove", (event) =>
+      this.onPointerMove(event)
+    );
+    window.addEventListener("click", (event) => this.onClick(event));
+
+    //add event listener for escape key to remove transform controls
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        if (this.selectedObject) {
+          this.selectedObject.material.color.set(0xffffff);
+          this.selectedObject = null;
+          this.removeTransformControls();
+        }
+      }
+    });
+  }
+
+  onPointerMove(event) {
     if (
       event.clientX >= 0 &&
       event.clientX <= window.innerWidth &&
       event.clientY >= 0 &&
       event.clientY <= window.innerHeight
     ) {
-      isPointerInWindow = true;
-      // Calculate pointer position in normalized device coordinates
-      pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-      pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      this.isPointerInWindow = true;
+      this.pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+      this.pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
     } else {
-      isPointerInWindow = false;
+      this.isPointerInWindow = false;
     }
   }
 
-  function updateRaycaster() {
-    if (!isPointerInWindow) return;
+  onClick(event) {
+    if (!this.isPointerInWindow) return;
 
-    // Update the picking ray with the camera and pointer position
-    raycaster.setFromCamera(pointer, camera);
+    this.raycaster.setFromCamera(this.pointer, this.camera);
 
-    // Calculate objects intersecting the picking ray
-    const intersects = raycaster.intersectObjects(scene.children);
+    // Filter out the objects we want to exclude from raycasting
+    const objectsToIntersect = this.scene.children.filter(
+      (object) => !this.objectsToExclude.has(object)
+    );
 
-    // Reset color of previously intersected objects
-    intersectedObjects.forEach((object) => {
-      object.material.color.set(0xffffff); // Assuming original color is white
-    });
+    let intersects = this.raycaster.intersectObjects(objectsToIntersect, true);
 
-    intersectedObjects.clear();
+    intersects = intersects.filter(
+      (intersect) => intersect.object.visible && intersect.object.isMesh
+    );
 
-    // Highlight intersected objects
-    for (let i = 0; i < intersects.length; i++) {
-      if (intersects[i].object.isMesh) {
-        intersects[i].object.material.color.set(new THREE.Color("yellow"));
-        intersectedObjects.add(intersects[i].object);
+    if (intersects.length > 0) {
+      const clickedObject = intersects[0].object;
+      console.log(clickedObject);
+      if (clickedObject.isMesh) {
+        if (this.selectedObject !== clickedObject) {
+          if (this.selectedObject) {
+            this.selectedObject.material.color.set(0xffffff);
+          }
+          this.selectedObject = clickedObject;
+          this.selectedObject.material.color.set(0xffff00);
+          this.addTransformControls(this.selectedObject);
+        }
+      }
+    } else {
+      if (this.selectedObject) {
+        this.selectedObject.material.color.set(0xffffff);
+        this.selectedObject = null;
+        this.removeTransformControls();
       }
     }
   }
 
-  window.addEventListener("pointermove", onPointerMove);
+  addTransformControls(object) {
+    this.removeTransformControls();
+    this.transformControls = new TransformControls(
+      this.camera,
+      this.renderer.domElement
+    );
+    this.transformControls.attach(object);
+    this.scene.add(this.transformControls);
 
-  return {
-    updateRaycaster,
-  };
+    // Add the TransformControls to the exclusion set
+    this.objectsToExclude.add(this.transformControls);
+
+    this.transformControls.addEventListener("dragging-changed", (event) => {
+      this.controls.enabled = !event.value;
+    });
+  }
+
+  removeTransformControls() {
+    if (this.transformControls) {
+      this.transformControls.detach();
+      this.scene.remove(this.transformControls);
+      // Remove the TransformControls from the exclusion set
+      this.objectsToExclude.delete(this.transformControls);
+      this.transformControls = null;
+    }
+  }
+
+  updateRaycaster() {
+    if (!this.isPointerInWindow) return;
+
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+    // Filter out the objects we want to exclude from raycasting
+    const objectsToIntersect = this.scene.children.filter(
+      (object) => !this.objectsToExclude.has(object)
+    );
+
+    const intersects = this.raycaster.intersectObjects(
+      objectsToIntersect,
+      true
+    );
+
+    this.intersectedObjects.forEach((object) => {
+      if (object !== this.selectedObject) {
+        object.material.color.set(0xffffff);
+      }
+    });
+
+    this.intersectedObjects.clear();
+
+    for (let i = 0; i < intersects.length; i++) {
+      if (
+        intersects[i].object.isMesh &&
+        intersects[i].object !== this.selectedObject
+      ) {
+        intersects[i].object.material.color.set(new THREE.Color("red"));
+        this.intersectedObjects.add(intersects[i].object);
+      }
+    }
+  }
+
+  dispose() {
+    window.removeEventListener("pointermove", this.onPointerMove);
+    window.removeEventListener("click", this.onClick);
+    this.removeTransformControls();
+  }
 }

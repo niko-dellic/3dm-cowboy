@@ -355,7 +355,6 @@ export class FileManager {
     const center = boundingBox.getCenter(new THREE.Vector3());
 
     const maxDim = Math.max(size.x, size.y, size.z);
-    console.log(camera);
     const fov = camera.fov * (Math.PI / 180);
     const cameraZ = Math.abs(maxDim / (2 * Math.tan(fov / 2)));
     const adjustedCameraZ = cameraZ * offset;
@@ -395,7 +394,7 @@ export class FileManager {
 
           // make invisible
           normals.visible = false;
-          this.scene.add(normals);
+          child.add(normals);
 
           // add event listener for keypress N
           document.addEventListener("keydown", (event) => {

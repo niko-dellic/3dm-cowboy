@@ -6,6 +6,7 @@ import {
 } from "recast-navigation/three";
 import * as THREE from "three";
 import { DebugDrawer, NavMeshHelper } from "recast-navigation/three";
+import { TransformControls } from "three/addons/controls/TransformControls.js";
 
 export default class NavigationGenerator {
   constructor(scene, tileSize = 24) {

@@ -45,28 +45,16 @@ async function init() {
   // scene.add(directionalLight);
 
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-  // scene.add(ambientLight);
+  scene.add(ambientLight);
 
   fileManager = new FileManager(scene, camera, renderer, controls, navGen, gui);
-  let model;
+  raycastManager = new RaycastManager(scene, camera, renderer, controls);
 
-  // model = await fileManager.loadFile("full_Sphere.3dm");
-  model = await fileManager.loadFile("platforms.3dm");
-  // model = await fileManager.loadFile("dungeon.gltf");
-  // model = await fileManager.loadFile("environment.glb");
+  // await fileManager.loadFile("full_Sphere.3dm");
+  await fileManager.loadFile("platforms.3dm");
+  // await fileManager.loadFile("dungeon.gltf");
+  // await fileManager.loadFile("environment.glb");
 
-  if (model) {
-    // fitCameraToObject(camera, model, 2, controls);
-    // guiLayers(model.userData.layers);
-    // model.children.forEach((child) => {
-    //   const control = new TransformControls(camera, renderer.domElement);
-    //   control.attach(child);
-    //   scene.add(control);
-    // });
-    // raycastManager = RaycastManager(scene, camera, renderer);
-  }
-
-  // Initialize RaycastManager
   window.addEventListener("resize", resize);
   renderer.setAnimationLoop(animate);
 }
@@ -84,9 +72,9 @@ function resize() {
 function animate() {
   controls.update();
 
-  // if (raycastManager) {
-  //   raycastManager.updateRaycaster(); // Update the raycaster within the main render loop
-  // }
+  if (raycastManager) {
+    raycastManager.updateRaycaster();
+  }
   renderer.render(scene, camera);
 }
 
