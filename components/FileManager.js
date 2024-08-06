@@ -19,6 +19,7 @@ export class FileManager {
     );
     this.boundingBoxes = [];
     this.boundingBoxesVisible = false;
+    this.allNormals = [];
 
     this.initRhino();
 
@@ -73,6 +74,7 @@ export class FileManager {
     });
 
     this.guiLayers(object.userData.layers, this.gui);
+    this.guiDebugger();
     this.guiNavMesh(this.gui);
     this.fitCameraToObject(this.camera, object, 2, this.controls);
     this.initDebugger(object);
@@ -240,21 +242,6 @@ export class FileManager {
     this.renderer.renderLists.dispose();
   }
 
-  initDebugger(model, scene) {
-    model.traverse((child) => {
-      if (child.isMesh) {
-        const geometry = child.geometry;
-        if (geometry) {
-          geometry.computeVertexNormals();
-          const normals = new VertexNormalsHelper(child, 0.1);
-          const line = addEdges(geometry);
-          // scene.add(normals);
-          scene.add(line);
-        }
-      }
-    });
-  }
-
   addEdges(geometry) {
     const edges = new THREE.EdgesGeometry(geometry);
     const line = new THREE.LineSegments(
@@ -341,6 +328,29 @@ export class FileManager {
     );
   }
 
+  guiDebugger() {
+    const debugFolder = this.gui.addFolder("Debug");
+    debugFolder
+      .add({ BoundingBoxes: this.boundingBoxesVisible }, "BoundingBoxes")
+      .onChange(() => this.toggleBoundingBoxes());
+
+    // add slider to adjust normals length
+    debugFolder
+      .add({ NormalLength: 1 }, "NormalLength", 0, 10, 0.1)
+      .onChange((val) => {
+        this.allNormals.forEach((normals) => {
+          normals.size = val;
+          normals.update();
+        });
+      });
+
+    debugFolder.add({ Normals: false }, "Normals").onChange(() => {
+      this.allNormals.forEach((normals) => {
+        normals.visible = !normals.visible;
+      });
+    });
+  }
+
   fitCameraToObject(
     camera,
     object,
@@ -395,6 +405,7 @@ export class FileManager {
           // make invisible
           normals.visible = false;
           child.add(normals);
+          this.allNormals.push(normals);
 
           // add event listener for keypress N
           document.addEventListener("keydown", (event) => {

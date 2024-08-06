@@ -4,9 +4,6 @@ import { FileManager } from "./components/FileManager";
 import RaycastManager from "./components/RaycasterManager";
 import NavigationGenerator from "./components/NavigationGenerator"; // Adjust the path as necessary
 import { GUI } from "three/examples/jsm/libs/lil-gui.module.min.js";
-import { TransformControls } from "three/addons/controls/TransformControls.js";
-
-// import CameraControls from "camera-controls";
 
 let camera, scene, renderer;
 let controls;
@@ -45,7 +42,7 @@ async function init() {
   // scene.add(directionalLight);
 
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-  scene.add(ambientLight);
+  // scene.add(ambientLight);
 
   fileManager = new FileManager(scene, camera, renderer, controls, navGen, gui);
   raycastManager = new RaycastManager(scene, camera, renderer, controls);

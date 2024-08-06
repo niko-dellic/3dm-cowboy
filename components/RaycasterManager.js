@@ -60,14 +60,12 @@ export default class RaycastManager {
     );
 
     let intersects = this.raycaster.intersectObjects(objectsToIntersect, true);
-
     intersects = intersects.filter(
       (intersect) => intersect.object.visible && intersect.object.isMesh
     );
 
     if (intersects.length > 0) {
       const clickedObject = intersects[0].object;
-      console.log(clickedObject);
       if (clickedObject.isMesh) {
         if (this.selectedObject !== clickedObject) {
           if (this.selectedObject) {
@@ -80,7 +78,7 @@ export default class RaycastManager {
       }
     } else {
       if (this.selectedObject) {
-        this.selectedObject.material.color.set(0xffffff);
+        this.highlightObject(this.selectedObject, true);
         this.selectedObject = null;
         this.removeTransformControls();
       }
@@ -124,15 +122,16 @@ export default class RaycastManager {
       (object) => !this.objectsToExclude.has(object)
     );
 
-    const intersects = this.raycaster.intersectObjects(
-      objectsToIntersect,
-      true
+    let intersects = this.raycaster.intersectObjects(objectsToIntersect, true);
+
+    intersects = intersects.filter(
+      (intersect) => intersect.object.visible && intersect.object.isMesh
     );
 
     // Reset color of all previously intersected objects
     this.intersectedObjects.forEach((object) => {
       if (object !== this.selectedObject) {
-        object.material.color.set(0xffffff);
+        this.highlightObject(object, true);
       }
     });
 
@@ -145,9 +144,20 @@ export default class RaycastManager {
         intersectedObject.isMesh &&
         intersectedObject !== this.selectedObject
       ) {
-        intersectedObject.material.color.set(new THREE.Color("red"));
+        this.highlightObject(intersectedObject);
+
         this.intersectedObjects.add(intersectedObject);
       }
+    }
+  }
+
+  highlightObject(object, reset = false) {
+    const line = object.children.find((child) => child.isLineSegments);
+    if (!line) return;
+    if (reset) {
+      line.material.color.set(new THREE.Color("blue"));
+    } else {
+      line.material.color.set(new THREE.Color("red"));
     }
   }
 
