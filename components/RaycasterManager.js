@@ -118,6 +118,7 @@ export default class RaycastManager {
     if (!this.isPointerInWindow) return;
 
     this.raycaster.setFromCamera(this.pointer, this.camera);
+
     // Filter out the objects we want to exclude from raycasting
     const objectsToIntersect = this.scene.children.filter(
       (object) => !this.objectsToExclude.has(object)
@@ -128,6 +129,7 @@ export default class RaycastManager {
       true
     );
 
+    // Reset color of all previously intersected objects
     this.intersectedObjects.forEach((object) => {
       if (object !== this.selectedObject) {
         object.material.color.set(0xffffff);
@@ -136,13 +138,15 @@ export default class RaycastManager {
 
     this.intersectedObjects.clear();
 
-    for (let i = 0; i < intersects.length; i++) {
+    // Highlight only the first intersected object (topmost)
+    if (intersects.length > 0) {
+      const intersectedObject = intersects[0].object;
       if (
-        intersects[i].object.isMesh &&
-        intersects[i].object !== this.selectedObject
+        intersectedObject.isMesh &&
+        intersectedObject !== this.selectedObject
       ) {
-        intersects[i].object.material.color.set(new THREE.Color("red"));
-        this.intersectedObjects.add(intersects[i].object);
+        intersectedObject.material.color.set(new THREE.Color("red"));
+        this.intersectedObjects.add(intersectedObject);
       }
     }
   }
