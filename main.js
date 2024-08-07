@@ -14,7 +14,11 @@ let navGen;
 init();
 
 async function init() {
-  // THREE.Object3D.DEFAULT_UP.set(0, 0, 1);
+  // do mobile check
+  if (mobileCheck()) {
+    //add mobile to the body class
+    document.body.classList.add("mobile");
+  }
 
   initGUI(scene);
 
@@ -34,8 +38,6 @@ async function init() {
 
   scene = new THREE.Scene();
   navGen = new NavigationGenerator(scene);
-
-  // scene.background = new THREE.Color("blue");
 
   const directionalLight = new THREE.DirectionalLight(0xffffff, 6);
   directionalLight.position.set(50, 50, 50);
@@ -57,6 +59,12 @@ async function init() {
   renderer.setAnimationLoop(animate);
 }
 
+function mobileCheck() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+}
+
 function resize() {
   const width = window.innerWidth;
   const height = window.innerHeight;
@@ -65,6 +73,11 @@ function resize() {
   camera.updateProjectionMatrix();
 
   renderer.setSize(width, height);
+  if (mobileCheck()) {
+    document.body.classList.add("mobile");
+  } else if (document.body.classList.contains("mobile")) {
+    document.body.classList.remove("mobile");
+  }
 }
 
 function animate() {
@@ -77,10 +90,24 @@ function animate() {
 }
 
 function initGUI() {
-  gui = new GUI({ title: "Controls" });
+  gui = new GUI({ title: "3DM COWBOY" });
+
+  if (mobileCheck()) {
+    gui.close();
+  }
 
   // add folder for file upload
   const fileFolder = gui.addFolder("File");
+
+  // add a folder to explain the proejct
+  fileFolder.add(
+    {
+      Yeehaw:
+        "This project is a 3D model viewer that allows you to upload 3dm, gltf, and glb files. You can also generate a navigation mesh from the uploaded 3dm files.",
+    },
+    "Yeehaw"
+  );
+
   fileFolder.add(
     {
       Upload: () => {

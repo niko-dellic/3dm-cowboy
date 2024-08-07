@@ -1,0 +1,15 @@
+.lil-gui {
+  /* --background-color: #000; */
+  /* right 0 */
+  --widget-margin: 0;
+  right: 0 !important;
+}
+
+.mobile .lil-gui {
+  /* right 0 */
+  --widget-margin: 0;
+  /* width 100% */
+  width: 100%;
+  bottom: 0;
+  top: auto;
+}

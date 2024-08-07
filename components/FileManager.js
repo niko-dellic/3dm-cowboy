@@ -258,6 +258,9 @@ export class FileManager {
     if (!layers) return;
 
     const layerFolder = gui.addFolder("Layers");
+
+    layerFolder.close();
+
     const scene = this.scene;
 
     for (let i = 0; i < layers.length; i++) {
@@ -283,6 +286,17 @@ export class FileManager {
           });
         });
     }
+
+    // add delete all button
+    layerFolder.add(
+      {
+        DeleteGeometry: () => {
+          this.deleteAll();
+          layerFolder.destroy();
+        },
+      },
+      "DeleteGeometry"
+    );
   }
 
   guiNavMesh(gui) {
@@ -330,6 +344,7 @@ export class FileManager {
 
   guiDebugger() {
     const debugFolder = this.gui.addFolder("Debug");
+    debugFolder.close();
     debugFolder
       .add({ BoundingBoxes: this.boundingBoxesVisible }, "BoundingBoxes")
       .onChange(() => this.toggleBoundingBoxes());
