@@ -46,6 +46,7 @@ async function init() {
 
   fileManager = new FileManager(scene, camera, renderer, controls, navGen, gui);
   raycastManager = new RaycastManager(scene, camera, renderer, controls);
+  navGen.raycastManager = raycastManager;
 
   // await fileManager.loadFile("full_Sphere.3dm");
   await fileManager.loadFile("platforms.3dm");

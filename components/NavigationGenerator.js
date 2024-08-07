@@ -45,6 +45,8 @@ export default class NavigationGenerator {
 
     await this.init();
 
+    this.raycastManager.removeTransformControls();
+
     this.collectMeshes();
 
     this.config.tileSize = tileSize || this.config.tileSize;
