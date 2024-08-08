@@ -37,6 +37,7 @@ async function init() {
   controls = new OrbitControls(camera, renderer.domElement);
 
   scene = new THREE.Scene();
+
   navGen = new NavigationGenerator(scene);
 
   const directionalLight = new THREE.DirectionalLight(0xffffff, 6);
@@ -50,7 +51,7 @@ async function init() {
   raycastManager = new RaycastManager(scene, camera, renderer, controls);
   navGen.raycastManager = raycastManager;
 
-  // await fileManager.loadFile("full_Sphere.3dm");
+  // await fileManager.loadFile("template.3dm");
   await fileManager.loadFile("platforms.3dm");
   // await fileManager.loadFile("dungeon.gltf");
   // await fileManager.loadFile("environment.glb");

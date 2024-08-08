@@ -59,6 +59,8 @@ export class FileManager {
       object.userData.settings.modelUnitSystem.name
     );
     this.convertZUpToYUp(object);
+    // this.correctCenter(object);
+    this.applyLayerColor(object);
 
     this.scene.add(object);
     this.addBoundingBox(object);
@@ -200,9 +202,15 @@ export class FileManager {
     // Update the entire object's matrix
     object.updateMatrixWorld(true);
   }
+
   convertZUpToYUp(object) {
     object.traverse((child) => {
-      if (child.isMesh) {
+      if (
+        child.isMesh ||
+        child.isLine ||
+        child.isLineSegments ||
+        child.isPoints
+      ) {
         // Create a rotation matrix for -90 degrees around the X-axis
         const rotationMatrix = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
 
@@ -217,11 +225,74 @@ export class FileManager {
     // Update the entire object's matrix
     object.updateMatrixWorld(true);
   }
+
+  correctCenter(object) {
+    object.traverse((child) => {
+      if (child.isMesh) {
+        const geometry = child.geometry;
+
+        if (!(geometry instanceof THREE.BufferGeometry)) {
+          console.warn("Geometry is not a BufferGeometry. Skipping.");
+          return;
+        }
+
+        // Compute bounding box
+        geometry.computeBoundingBox();
+        const boundingBox = geometry.boundingBox;
+        const center = new THREE.Vector3();
+        boundingBox.getCenter(center);
+
+        const position = geometry.getAttribute("position");
+
+        // Modify vertex positions
+        for (let i = 0; i < position.count; i++) {
+          let x = position.getX(i);
+          let y = position.getY(i);
+          let z = position.getZ(i);
+
+          position.setXYZ(i, x - center.x, y - center.y, z - center.z);
+        }
+
+        position.needsUpdate = true;
+        geometry.computeBoundingSphere();
+
+        // Move the mesh back by the same amount
+        child.position.add(center);
+      }
+    });
+
+    // Update the object's matrix
+    object.updateMatrix();
+  }
+
+  applyLayerColor(object) {
+    object.traverse((child) => {
+      let color = child.userData?.attributes?.drawColor || null;
+      if (color) {
+        color = new THREE.Color(`rgb(${color.r}, ${color.g}, ${color.b})`);
+        // if black, flip to white
+        if (color.r === 0 && color.g === 0 && color.b === 0) {
+          color = new THREE.Color("white");
+        }
+        const mat = new THREE.MeshBasicMaterial({
+          color: color,
+        });
+        child.material = mat;
+      }
+    });
+  }
+
   deleteAll() {
     const objectsToRemove = [];
 
     this.scene.traverse((child) => {
-      if (child instanceof THREE.Mesh || child instanceof THREE.BoxHelper) {
+      if (
+        child.isMesh ||
+        child.isLine ||
+        child.isLineSegments ||
+        child.isPoints ||
+        child instanceof THREE.BoxHelper
+      ) {
         objectsToRemove.push(child);
       }
     });
@@ -247,7 +318,7 @@ export class FileManager {
     const line = new THREE.LineSegments(
       edges,
       new THREE.LineBasicMaterial({
-        color: new THREE.Color("blue"),
+        color: new THREE.Color("red"),
       })
     );
     return line;
@@ -305,7 +376,7 @@ export class FileManager {
     let tileSize = 25;
     const navGen = this.navGen;
     navTools
-      .add({ tileSize: tileSize }, "tileSize", 3, 50, 1)
+      .add({ tileSize: tileSize }, "tileSize", 3, 5000, 1)
       .name("Tile Size")
       .onChange((val) => {
         tileSize = val;
