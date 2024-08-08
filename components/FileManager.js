@@ -266,17 +266,43 @@ export class FileManager {
   }
 
   applyLayerColor(object) {
+    const sprite = new THREE.TextureLoader().load("textures/disc.png");
+
     object.traverse((child) => {
       let color = child.userData?.attributes?.drawColor || null;
       if (color) {
+        if (child.isPoints) {
+          console.log("points founds");
+        }
         color = new THREE.Color(`rgb(${color.r}, ${color.g}, ${color.b})`);
         // if black, flip to white
         if (color.r === 0 && color.g === 0 && color.b === 0) {
           color = new THREE.Color("white");
         }
-        const mat = new THREE.MeshBasicMaterial({
-          color: color,
-        });
+
+        let mat;
+
+        if (child.isMesh) {
+          mat = new THREE.MeshBasicMaterial({
+            color: color,
+          });
+        } else if (child.isLine || child.isLineSegments) {
+          mat = new THREE.LineBasicMaterial({
+            color: color,
+          });
+        } else if (child.isPoints) {
+          mat = new THREE.PointsMaterial({
+            color: color,
+            size: 35,
+            sizeAttenuation: true,
+            map: sprite,
+            depthTest: false,
+            alphaTest: 0.5,
+            transparent: true,
+          });
+          console.log("points founds", mat);
+        }
+
         child.material = mat;
       }
     });
@@ -376,7 +402,7 @@ export class FileManager {
     let tileSize = 25;
     const navGen = this.navGen;
     navTools
-      .add({ tileSize: tileSize }, "tileSize", 3, 5000, 1)
+      .add({ tileSize: tileSize }, "tileSize", 3, 200, 1)
       .name("Tile Size")
       .onChange((val) => {
         tileSize = val;

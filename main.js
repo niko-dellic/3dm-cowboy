@@ -51,8 +51,8 @@ async function init() {
   raycastManager = new RaycastManager(scene, camera, renderer, controls);
   navGen.raycastManager = raycastManager;
 
-  // await fileManager.loadFile("template.3dm");
-  await fileManager.loadFile("platforms.3dm");
+  await fileManager.loadFile("template.3dm");
+  // await fileManager.loadFile("platforms.3dm");
   // await fileManager.loadFile("dungeon.gltf");
   // await fileManager.loadFile("environment.glb");
 

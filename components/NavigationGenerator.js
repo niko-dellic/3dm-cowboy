@@ -9,18 +9,29 @@ import { DebugDrawer, NavMeshHelper } from "recast-navigation/three";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
 
 export default class NavigationGenerator {
-  constructor(scene, tileSize = 24) {
+  constructor(scene, tileSize = 25) {
     this.scene = scene;
     this.tileSize = tileSize;
     this.navMeshGenerated = false;
     this.meshes = [];
+
+    // this.config = {
+    //   cs: 0.05,
+    //   ch: 0.2,
+    //   walkableHeight: 1,
+    //   walkableClimb: 2.5,
+    //   walkableRadius: 1,
+    //   borderSize: 2,
+    //   tileSize: this.tileSize,
+    // };
+
     this.config = {
-      cs: 0.05,
-      ch: 0.2,
-      walkableHeight: 1,
-      walkableClimb: 2.5,
-      walkableRadius: 1,
-      borderSize: 2,
+      cs: 0.5, // Increase cell size
+      ch: 1, // Increase cell height
+      walkableHeight: 1, // Adjust based on model's dimensions
+      walkableClimb: 2.5, // Adjust based on model's dimensions
+      walkableRadius: 1.5, // Adjust based on model's dimensions
+      borderSize: 3, // Adjust to ensure proper border handling
       tileSize: this.tileSize,
     };
   }
